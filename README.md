@@ -73,6 +73,10 @@ Notes:
   (`CreatedAPIKey.Token`). `UpdateAPIKeyRequest` distinguishes "leave expiry
   unchanged" (default), `SetExpiry(t)` and `ClearExpiry()` (never expires).
   API keys are confined to their project and cannot create projects.
+- **DNS records** — `UpdateDNSRecordRequest.ResourceVersion` and
+  `DNSRecords.DeleteWithOptions` with `DeleteDNSRecordOptions.ResourceVersion`
+  support optimistic concurrency. A stale version returns HTTP 409; refetch
+  the record before retrying.
 
 ### Examples
 

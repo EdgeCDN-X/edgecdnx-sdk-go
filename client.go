@@ -190,7 +190,7 @@ func (c *Client) do(ctx context.Context, method, path string, body, out any) err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode >= 400 {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return newAPIError(resp)
 	}
 

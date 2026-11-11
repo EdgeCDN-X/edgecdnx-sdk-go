@@ -3,6 +3,7 @@ package edgecdnx
 import (
 	"context"
 	"net/http"
+	"net/url"
 
 	v1alpha1 "github.com/EdgeCDN-X/edgecdnx-controller/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -89,5 +90,20 @@ func (s *DNSRecordsService) Update(ctx context.Context, projectID, zoneID, recor
 
 // Delete deletes a DNS record by its identifier.
 func (s *DNSRecordsService) Delete(ctx context.Context, projectID, zoneID, recordID string) error {
-	return s.client.do(ctx, http.MethodDelete, dnsRecordsPath(projectID, zoneID)+"/"+pathEscape(recordID), nil, nil)
+	return s.DeleteWithOptions(ctx, projectID, zoneID, recordID, DeleteDNSRecordOptions{})
+}
+
+// DeleteDNSRecordOptions configures conditional deletion of a DNS record.
+type DeleteDNSRecordOptions struct {
+	// ResourceVersion prevents deletion if the record has changed since it was read.
+	ResourceVersion string
+}
+
+// DeleteWithOptions deletes a DNS record with optional concurrency preconditions.
+func (s *DNSRecordsService) DeleteWithOptions(ctx context.Context, projectID, zoneID, recordID string, opts DeleteDNSRecordOptions) error {
+	path := dnsRecordsPath(projectID, zoneID) + "/" + pathEscape(recordID)
+	if opts.ResourceVersion != "" {
+		path += "?" + url.Values{"resourceVersion": {opts.ResourceVersion}}.Encode()
+	}
+	return s.client.do(ctx, http.MethodDelete, path, nil, nil)
 }
