@@ -128,6 +128,18 @@ if errors.As(err, &apiErr) {
 
 Also available: `IsBadRequest`, `IsUnauthorized`, `IsForbidden`, `IsConflict`.
 
+## Versioning
+
+The SDK uses independent [Semantic Versioning](https://semver.org/), starting at
+`v0.1.0`. SDK versions do not track API versions. While the SDK is below `v1.0.0`,
+minor releases may introduce breaking changes; patch releases contain compatible
+fixes. From `v1.0.0`, breaking SDK changes require a major version bump.
+
+API compatibility is determined by the endpoints and payloads supported by each
+release, not by matching version numbers. This initial release implements the
+operations listed above; project update/delete and zone get/update are not
+available in the current API.
+
 ## Development
 
 ```sh
