@@ -16,6 +16,8 @@ type LocationsService struct {
 type CreateLocationRequest struct {
 	// Name is the location name (DNS-1123 subdomain).
 	Name string `json:"name"`
+	// BaseDomain is the base domain used for resources in this location.
+	BaseDomain string `json:"baseDomain,omitempty"`
 	// Labels are additional labels applied to the location.
 	Labels map[string]string `json:"labels,omitempty"`
 	// NodeGroups define the node groups serving this location.
@@ -31,6 +33,7 @@ type CreateLocationRequest struct {
 // UpdateLocationRequest is the payload for LocationsService.Update.
 // Nil fields remain unchanged.
 type UpdateLocationRequest struct {
+	BaseDomain        *string                   `json:"baseDomain,omitempty"`
 	Labels            *map[string]string        `json:"labels,omitempty"`
 	NodeGroups        *[]v1alpha1.NodeGroupSpec `json:"nodeGroups,omitempty"`
 	GeoLookup         *v1alpha1.GeoLookupSpec   `json:"geoLookup,omitempty"`

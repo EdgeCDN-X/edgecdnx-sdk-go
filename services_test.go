@@ -363,10 +363,26 @@ func TestLocationsService(t *testing.T) {
 
 	t.Run("Create", func(t *testing.T) {
 		var rec recordedRequest
-		client := newTestClient(t, 201, v1alpha1.Location{ObjectMeta: metav1.ObjectMeta{Name: "eu-west"}}, &rec)
-		_, err := client.Locations.Create(ctx, "proj", CreateLocationRequest{
-			Name:   "eu-west",
-			Weight: 10,
+		client := newTestClient(t, 201, v1alpha1.Location{
+			ObjectMeta: metav1.ObjectMeta{Name: "eu-west"},
+			Spec: v1alpha1.LocationSpec{
+				BaseDomain: "edge.example.com",
+				NodeGroups: []v1alpha1.NodeGroupSpec{{
+					Name:         "cache",
+					NodeSelector: map[string]string{"pool": "edge"},
+					Nodes:        []v1alpha1.NodeSpec{{Name: "node-1", Cname: "node-1.example.com"}},
+				}},
+			},
+		}, &rec)
+		location, err := client.Locations.Create(ctx, "proj", CreateLocationRequest{
+			Name:       "eu-west",
+			BaseDomain: "edge.example.com",
+			Weight:     10,
+			NodeGroups: []v1alpha1.NodeGroupSpec{{
+				Name:         "cache",
+				NodeSelector: map[string]string{"pool": "edge"},
+				Nodes:        []v1alpha1.NodeSpec{{Name: "node-1", Cname: "node-1.example.com"}},
+			}},
 		})
 		if err != nil {
 			t.Fatalf("Create: %v", err)
@@ -374,13 +390,60 @@ func TestLocationsService(t *testing.T) {
 		if rec.Method != "POST" || rec.Path != "/project/proj/locations" {
 			t.Fatalf("unexpected request %s %s", rec.Method, rec.Path)
 		}
+		var sent map[string]any
+		if err := json.Unmarshal(rec.Body, &sent); err != nil {
+			t.Fatalf("unmarshal sent body: %v", err)
+		}
+		if sent["baseDomain"] != "edge.example.com" {
+			t.Fatalf("baseDomain missing from request: %s", rec.Body)
+		}
+		nodeGroups, ok := sent["nodeGroups"].([]any)
+		if !ok || len(nodeGroups) != 1 {
+			t.Fatalf("nodeGroups missing from request: %s", rec.Body)
+		}
+		nodeGroup, ok := nodeGroups[0].(map[string]any)
+		if !ok {
+			t.Fatalf("invalid nodeGroup in request: %s", rec.Body)
+		}
+		nodeSelector, ok := nodeGroup["nodeSelector"].(map[string]any)
+		if !ok || nodeSelector["pool"] != "edge" {
+			t.Fatalf("nodeSelector missing from request: %s", rec.Body)
+		}
+		nodes, ok := nodeGroup["nodes"].([]any)
+		if !ok || len(nodes) != 1 {
+			t.Fatalf("nodes missing from request: %s", rec.Body)
+		}
+		node, ok := nodes[0].(map[string]any)
+		if !ok || node["cname"] != "node-1.example.com" {
+			t.Fatalf("node cname missing from request: %s", rec.Body)
+		}
+		if location.Spec.BaseDomain != "edge.example.com" || len(location.Spec.NodeGroups) != 1 {
+			t.Fatalf("new location DTO fields not decoded: %+v", location.Spec)
+		}
+		group := location.Spec.NodeGroups[0]
+		if group.NodeSelector["pool"] != "edge" || len(group.Nodes) != 1 ||
+			group.Nodes[0].Cname != "node-1.example.com" {
+			t.Fatalf("new location DTO fields not decoded: %+v", location.Spec)
+		}
+		legacyPayload, err := json.Marshal(CreateLocationRequest{Name: "eu-west"})
+		if err != nil {
+			t.Fatalf("marshal legacy request: %v", err)
+		}
+		var legacyBody map[string]any
+		if err := json.Unmarshal(legacyPayload, &legacyBody); err != nil {
+			t.Fatalf("unmarshal legacy request: %v", err)
+		}
+		if _, ok := legacyBody["baseDomain"]; ok {
+			t.Fatalf("unset baseDomain must be omitted, body %s", legacyPayload)
+		}
 	})
 
 	t.Run("Update", func(t *testing.T) {
 		var rec recordedRequest
 		client := newTestClient(t, 200, v1alpha1.Location{ObjectMeta: metav1.ObjectMeta{Name: "eu-west"}}, &rec)
 		_, err := client.Locations.Update(ctx, "proj", "eu-west", UpdateLocationRequest{
-			Weight: Ptr(int32(20)),
+			BaseDomain: Ptr(""),
+			Weight:     Ptr(int32(20)),
 		})
 		if err != nil {
 			t.Fatalf("Update: %v", err)
@@ -394,6 +457,9 @@ func TestLocationsService(t *testing.T) {
 		}
 		if sent["weight"] != float64(20) {
 			t.Fatalf("unexpected body %s", rec.Body)
+		}
+		if baseDomain, ok := sent["baseDomain"]; !ok || baseDomain != "" {
+			t.Fatalf("explicit empty baseDomain must be sent, body %s", rec.Body)
 		}
 		if _, ok := sent["labels"]; ok {
 			t.Fatalf("nil labels must be omitted, body %s", rec.Body)

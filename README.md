@@ -6,6 +6,8 @@ control plane (CLIs, operators, integrations, UIs, automation).
 
 ## Installation
 
+Requires Go 1.26 or later.
+
 ```sh
 go get github.com/EdgeCDN-X/edgecdnx-sdk-go
 ```
@@ -77,6 +79,9 @@ Notes:
   `DNSRecords.DeleteWithOptions` with `DeleteDNSRecordOptions.ResourceVersion`
   support optimistic concurrency. A stale version returns HTTP 409; refetch
   the record before retrying.
+- **Locations** — `CreateLocationRequest.BaseDomain` and
+  `UpdateLocationRequest.BaseDomain` configure or clear a location's base
+  domain. Node groups support `NodeSelector`, and their nodes support `Cname`.
 
 ### Examples
 
